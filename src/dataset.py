@@ -6,29 +6,38 @@ import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
 import kornia
-
-IMG_SIZE = 256
+from src.config import MainConfig
 
 
 class ColorizationDataset(Dataset):
     def __init__(self, root_dir, split="train"):
         self.files = glob.glob(os.path.join(root_dir, "*.jpg"))
+        self.files.sort()
 
         split_idx = int(len(self.files) * 0.8)
         if split == "train":
             self.files = self.files[:split_idx]
+            self.transforms = transforms.Compose(
+                [
+                    transforms.Resize(
+                        (MainConfig.IMG_SIZE, MainConfig.IMG_SIZE),
+                        transforms.InterpolationMode.BICUBIC,
+                    ),
+                    transforms.RandomHorizontalFlip(),
+                    transforms.ToTensor(),
+                ]
+            )
         else:
             self.files = self.files[split_idx:]
-
-        self.transforms = transforms.Compose(
-            [
-                transforms.Resize(
-                    (IMG_SIZE, IMG_SIZE), transforms.InterpolationMode.BICUBIC
-                ),
-                transforms.RandomHorizontalFlip(),
-                transforms.ToTensor(),
-            ]
-        )
+            self.transforms = transforms.Compose(
+                [
+                    transforms.Resize(
+                        (MainConfig.IMG_SIZE, MainConfig.IMG_SIZE),
+                        transforms.InterpolationMode.BICUBIC,
+                    ),
+                    transforms.ToTensor(),
+                ]
+            )
 
     def __len__(self):
         return len(self.files)
@@ -40,7 +49,7 @@ class ColorizationDataset(Dataset):
         return img
 
 
-class GPUDataProcessor(nn.Module):
+class DataProcessor(nn.Module):
     def __init__(self):
         super().__init__()
 
@@ -54,11 +63,11 @@ class GPUDataProcessor(nn.Module):
 
 
 if __name__ == "__main__":
-    ds = ColorizationDataset("data/landscape_images/color", split="train")
+    ds = ColorizationDataset(f"{MainConfig.DATA_PATH}/landscape_images", split="train")
     dl = DataLoader(ds, batch_size=4, shuffle=True)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    processor = GPUDataProcessor().to(device)
+    processor = DataProcessor().to(device)
 
     rgb_batch = next(iter(dl))
     print(f"1. CPU Output Shape: {rgb_batch.shape} (RGB)")
@@ -71,4 +80,4 @@ if __name__ == "__main__":
 
     print(f"2. GPU L Shape: {L.shape}")
     print(f"3. GPU ab Shape: {ab.shape}")
-    print(f"4. Max L Value: {L.max().item():.2f} (Should be ~1.0)")
+    print(f"4. Max L Value: {L.max().item():.2f}")
