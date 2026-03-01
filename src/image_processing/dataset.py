@@ -1,15 +1,16 @@
 import os
 import glob
+from pathlib import Path
+
 from PIL import Image
 import torch
-import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
-import kornia
-from src.config import main_config
+from src.setup.config import main_config
 import random
 
-from src.enums import RunTypeEnum
+from src.setup.enums import RunTypeEnum
+from src.image_processing.lab_convertor import LabConvertor
 
 
 class ColorizationDataset(Dataset):
@@ -18,7 +19,7 @@ class ColorizationDataset(Dataset):
         random.shuffle(self.files)
 
         split_idx = int(len(self.files) * 0.8)
-        if split == "train":
+        if split == RunTypeEnum.TRAIN:
             self.files = self.files[:split_idx]
             self.transforms = transforms.Compose(
                 [
@@ -52,25 +53,30 @@ class ColorizationDataset(Dataset):
         return img
 
 
-class DataProcessor(nn.Module):
-    def __init__(self):
-        super().__init__()
 
-    def forward(self, img_batch):
-        lab_batch = kornia.color.rgb_to_lab(img_batch)
 
-        L = lab_batch[:, [0], :, :] / 50 - 1
-        ab = lab_batch[:, 1:, :, :] / 128
-
-        return {"L": L, "ab": ab}
+def make_dataloaders(
+        root_dir: Path,
+        split: RunTypeEnum,
+        batch_size=16,
+        n_workers=4,
+        pin_memory=True
+):
+    dataset = ColorizationDataset(root_dir=root_dir, split=split)
+    dataloader = DataLoader(
+        dataset,
+        batch_size=batch_size,
+        num_workers=n_workers,
+        pin_memory=pin_memory
+    )
+    return dataloader
 
 
 if __name__ == "__main__":
-    ds = ColorizationDataset(f"{main_config.DATA_PATH}/landscape_images", split="train")
-    dl = DataLoader(ds, batch_size=4, shuffle=True)
+    dl = make_dataloaders(root_dir=main_config.LANDSCAPE_IMAGES, split=RunTypeEnum.TRAIN)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    processor = DataProcessor().to(device)
+    processor = LabConvertor().to(device)
 
     rgb_batch = next(iter(dl))
     print(f"1. CPU Output Shape: {rgb_batch.shape} (RGB)")
