@@ -5,6 +5,7 @@ from src.image_processing.dataset import make_dataloaders
 from src.image_processing.lab_convertor import LabConvertor
 from src.model import ColorizationModel
 from src.setup.config import main_config
+from src.setup.enums import RunTypeEnum
 from src.setup.utils import get_uuid_str
 
 
@@ -20,7 +21,7 @@ def colorize_image(model_id: str, image_path: str = None):
 
     dl = make_dataloaders(
         root_dir=main_config.LANDSCAPE_IMAGES,
-        split="test",
+        split=RunTypeEnum.TEST,
         batch_size=1,
         image_path=image_path
     )
