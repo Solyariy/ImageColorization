@@ -1,7 +1,7 @@
 import torch.nn as nn
 
-from src.model.decoder import UNetDecoder
-from src.model.encoder import ResNetEncoder
+from src.models.decoder import UNetDecoder
+from src.models.encoder import ResNetEncoder
 
 
 class ColorizationModel(nn.Module):

@@ -1,0 +1,2 @@
+class ColorizationModel:
+    pass

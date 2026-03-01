@@ -1,64 +1,36 @@
 import torch
 import matplotlib.pyplot as plt
-import numpy as np
-from torch.utils.data import DataLoader
-import kornia
 
-# Import your code
-from dataset import ColorizationDataset, DataProcessor, MainConfig
-from model import ColorizationModel
+from src.image_processing.dataset import make_dataloaders
+from src.image_processing.lab_convertor import LabConvertor
+from src.model import ColorizationModel
+from src.setup.config import main_config
 
 
 def run_untrained_inference():
-    print("🚀 Loading 'Untrained' Model...")
+    device = main_config.DEVICE
 
-    # 1. Setup
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    MODEL_ID = "baseline_unet_epoch_10"
 
-    # Load your custom U-Net (Phase 1)
     model = ColorizationModel().to(device)
+    checkpoint = torch.load(main_config.TRAINED_MODELS / (MODEL_ID + ".pth"), map_location=device)
+    model.load_state_dict(checkpoint)
+    model.eval()
 
-    # Load your GPU Data Processor
-    processor = DataProcessor().to(device)
+    processor = LabConvertor().to(device)
 
-    # Load Data
-    ds = ColorizationDataset(f"{MainConfig.DATA_PATH}/landscape_images", split="train")
-    if len(ds) == 0:
-        print("❌ No images found! Check path in dataset.py")
-        return
-    dl = DataLoader(ds, batch_size=1, shuffle=True)
+    dl = make_dataloaders(root_dir=main_config.LANDSCAPE_IMAGES, split="test", batch_size=1)
 
-    # 2. Get a real image
-    rgb_input = next(iter(dl)).to(device)  # [1, 3, 256, 256]
+    rgb_input = next(iter(dl)).to(device)
 
-    # 3. Prepare the Input (L Channel)
-    # We use your processor to get the 'L' channel cleanly
     data = processor(rgb_input)
-    L_input = data['L']  # Range [-1, 1]
+    L_input = data["L"]
 
-    # 4. The "Forward Pass"
-    # This is the moment of truth. The image goes into the U-Net.
-    print("🎨 Running image through the U-Net...")
-    model.eval()  # Set to evaluation mode
+    model.eval()
     with torch.no_grad():
-        ab_predicted = model(L_input)  # Model tries to guess colors
+        ab_predicted = model(L_input)
 
-    # 5. Reconstruct the Image
-    # We combine the Real L (Detail) with the Predicted ab (Color)
-    lab_predicted = torch.cat([L_input, ab_predicted], dim=1)
-
-    # Reverse the math (Normalize -> 0..100 -> RGB)
-    # (Manual un-normalization to be safe)
-    L_unscaled = (lab_predicted[:, [0], :, :] + 1.0) * 50.0
-    ab_unscaled = lab_predicted[:, 1:, :, :] * 128.0
-    lab_unscaled = torch.cat([L_unscaled, ab_unscaled], dim=1)
-
-    # Convert to RGB
-    rgb_output = kornia.color.lab_to_rgb(lab_unscaled)
-    rgb_output = torch.clamp(rgb_output, 0.0, 1.0)  # Clip weird values
-
-    # 6. Visualize
-    print("💾 Saving result to 'untrained_result.png'...")
+    rgb_output = processor.unscale_to_rgb(L_input, ab_predicted)
 
     rgb_input_np = rgb_input[0].permute(1, 2, 0).cpu().numpy()
     rgb_output_np = rgb_output[0].permute(1, 2, 0).cpu().numpy()
@@ -66,25 +38,20 @@ def run_untrained_inference():
 
     fig, axes = plt.subplots(1, 3, figsize=(15, 5))
 
-    # A. The Input (What the model sees)
-    axes[0].imshow(L_input_np, cmap='gray')
-    axes[0].set_title("Input (Grayscale)")
-    axes[0].axis('off')
+    axes[0].imshow(L_input_np, cmap="gray")
+    axes[0].set_title("Input")
+    axes[0].axis("off")
 
-    # B. The Output (What the untrained model guesses)
     axes[1].imshow(rgb_output_np)
-    axes[1].set_title("Untrained Model Output\n(Should be shaped correctly but gray/brown)")
-    axes[1].axis('off')
+    axes[1].set_title("Trained Model Output")
+    axes[1].axis("off")
 
-    # C. The Target (What it SHOULD look like)
     axes[2].imshow(rgb_input_np)
-    axes[2].set_title("Target (Ground Truth)")
-    axes[2].axis('off')
+    axes[2].set_title("Target")
+    axes[2].axis("off")
 
     plt.tight_layout()
-    plt.savefig("untrained_result.png")
-    plt.show()
-    print("✅ Done! Check 'untrained_result.png'.")
+    plt.savefig(main_config.PREDICTED_IMAGES / f"{MODEL_ID}.jpeg")
 
 
 if __name__ == "__main__":
