@@ -5,7 +5,7 @@ import torch
 
 
 def get_datetime():
-    return datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+    return datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
 
 def get_device():
