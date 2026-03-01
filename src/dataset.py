@@ -6,13 +6,16 @@ import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
 import kornia
-from src.config import MainConfig
+from src.config import main_config
+import random
+
+from src.enums import RunTypeEnum
 
 
 class ColorizationDataset(Dataset):
-    def __init__(self, root_dir, split="train"):
+    def __init__(self, root_dir, split: RunTypeEnum = RunTypeEnum.TRAIN):
         self.files = glob.glob(os.path.join(root_dir, "*.jpg"))
-        self.files.sort()
+        random.shuffle(self.files)
 
         split_idx = int(len(self.files) * 0.8)
         if split == "train":
@@ -20,7 +23,7 @@ class ColorizationDataset(Dataset):
             self.transforms = transforms.Compose(
                 [
                     transforms.Resize(
-                        (MainConfig.IMG_SIZE, MainConfig.IMG_SIZE),
+                        (main_config.IMG_SIZE, main_config.IMG_SIZE),
                         transforms.InterpolationMode.BICUBIC,
                     ),
                     transforms.RandomHorizontalFlip(),
@@ -32,7 +35,7 @@ class ColorizationDataset(Dataset):
             self.transforms = transforms.Compose(
                 [
                     transforms.Resize(
-                        (MainConfig.IMG_SIZE, MainConfig.IMG_SIZE),
+                        (main_config.IMG_SIZE, main_config.IMG_SIZE),
                         transforms.InterpolationMode.BICUBIC,
                     ),
                     transforms.ToTensor(),
@@ -63,7 +66,7 @@ class DataProcessor(nn.Module):
 
 
 if __name__ == "__main__":
-    ds = ColorizationDataset(f"{MainConfig.DATA_PATH}/landscape_images", split="train")
+    ds = ColorizationDataset(f"{main_config.DATA_PATH}/landscape_images", split="train")
     dl = DataLoader(ds, batch_size=4, shuffle=True)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

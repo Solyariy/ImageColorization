@@ -1,14 +1,16 @@
 import torch
 from torch.utils.data import DataLoader
-from dataset import ColorizationDataset, MainConfig
+from dataset import ColorizationDataset
 import kornia
+
+from src.config import main_config
 
 
 def debug_values():
     print("🔍 Inspecting Data Pipeline...")
 
     # 1. Load Data
-    ds = ColorizationDataset(f"{MainConfig.DATA_PATH}/landscape_images", split="train")
+    ds = ColorizationDataset(f"{main_config.DATA_PATH}/landscape_images", split="train")
     dl = DataLoader(ds, batch_size=1, shuffle=True)
 
     # Get one image
