@@ -3,22 +3,16 @@ from torch import nn
 
 
 class UpBlock(nn.Module):
-    """
-    A helper block for the Decoder.
-    Responsibility: Upsample -> Concatenate -> Convolve.
-    """
-
     def __init__(self, in_channels, out_channels, skip_channels=0):
         super().__init__()
-        self.upsample = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
-
+        self.upsample = nn.Upsample(scale_factor=2, mode="bilinear", align_corners=True)
         self.conv = nn.Sequential(
             nn.Conv2d(in_channels + skip_channels, out_channels, kernel_size=3, padding=1, bias=False),
             nn.BatchNorm2d(out_channels),
-            nn.LeakyReLU(0.2),
+            nn.LeakyReLU(0.2, inplace=True),
             nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1, bias=False),
             nn.BatchNorm2d(out_channels),
-            nn.LeakyReLU(0.2)
+            nn.LeakyReLU(0.2, inplace=True)
         )
 
     def forward(self, x, skip_connection=None):
@@ -34,14 +28,14 @@ class UpBlock(nn.Module):
 class UNetDecoder(nn.Module):
     def __init__(self):
         super().__init__()
-        self.up1 = UpBlock(in_channels=512,out_channels=256, skip_channels=256)
-        self.up2 = UpBlock(in_channels=256, out_channels=128, skip_channels=128)
-        self.up3 = UpBlock(in_channels=128, out_channels=64, skip_channels=64)
-        self.up4 = UpBlock(in_channels=64, out_channels=64, skip_channels=64)
+        self.up1 = UpBlock(512, 256, skip_channels=256)
+        self.up2 = UpBlock(256, 128, skip_channels=128)
+        self.up3 = UpBlock(128, 64, skip_channels=64)
+        self.up4 = UpBlock(64, 64, skip_channels=64)
 
         self.final = nn.Sequential(
-            nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True),
-            nn.Conv2d(in_channels=64, out_channels=2, kernel_size=3, padding=1),
+            nn.Upsample(scale_factor=2, mode="bilinear", align_corners=True),
+            nn.Conv2d(64, 2, kernel_size=3, padding=1),
             nn.Tanh()
         )
 

@@ -1,14 +1,21 @@
+import torch
 from torch import nn
-from torchvision import models
+from torchvision.models import resnet18, ResNet18_Weights
 
 
 class ResNetEncoder(nn.Module):
     def __init__(self):
         super().__init__()
-        resnet = models.resnet18(pretrained=True)
+        resnet = resnet18(weights=ResNet18_Weights.DEFAULT)
+
+        original_conv1 = resnet.conv1
+        new_conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False)
+
+        with torch.no_grad():
+            new_conv1.weight.copy_(original_conv1.weight.sum(dim=1, keepdim=True))
 
         self.encoder0 = nn.Sequential(
-            nn.Conv2d(in_channels=1, out_channels=64, kernel_size=7, stride=2, padding=3, bias=False),
+            new_conv1,
             resnet.bn1,
             resnet.relu
         )

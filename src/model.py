@@ -1,22 +1,16 @@
-import torch
 import torch.nn as nn
-from torchvision import models
 
-
+from src.model.decoder import UNetDecoder
+from src.model.encoder import ResNetEncoder
 
 
 class ColorizationModel(nn.Module):
-    """
-    The Main Controller.
-    Responsibility: Connect Encoder to Decoder.
-    """
-
-    def __init__(self, encoder, decoder):
+    def __init__(self, encoder = ResNetEncoder, decoder = UNetDecoder):
         super().__init__()
-        self.encoder = encoder
-        self.decoder = decoder
+        self.encoder = encoder()
+        self.decoder = decoder()
 
-    def forward(self, x):
-        features = self.encoder(x)
-        output = self.decoder(features)
-        return output
+    def forward(self, L_input):
+        features = self.encoder(L_input)
+        ab_output = self.decoder(features)
+        return ab_output
