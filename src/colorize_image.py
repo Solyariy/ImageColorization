@@ -5,21 +5,25 @@ from src.image_processing.dataset import make_dataloaders
 from src.image_processing.lab_convertor import LabConvertor
 from src.model import ColorizationModel
 from src.setup.config import main_config
+from src.setup.utils import get_uuid_str
 
 
-def run_untrained_inference():
+def colorize_image(model_id: str, image_path: str = None):
     device = main_config.DEVICE
 
-    MODEL_ID = "baseline_unet_epoch_10"
-
     model = ColorizationModel().to(device)
-    checkpoint = torch.load(main_config.TRAINED_MODELS / (MODEL_ID + ".pth"), map_location=device)
+    checkpoint = torch.load(main_config.TRAINED_MODELS / (model_id + ".pth"), map_location=device)
     model.load_state_dict(checkpoint)
     model.eval()
 
     processor = LabConvertor().to(device)
 
-    dl = make_dataloaders(root_dir=main_config.LANDSCAPE_IMAGES, split="test", batch_size=1)
+    dl = make_dataloaders(
+        root_dir=main_config.LANDSCAPE_IMAGES,
+        split="test",
+        batch_size=1,
+        image_path=image_path
+    )
 
     rgb_input = next(iter(dl)).to(device)
 
@@ -36,7 +40,7 @@ def run_untrained_inference():
     rgb_output_np = rgb_output[0].permute(1, 2, 0).cpu().numpy()
     L_input_np = L_input[0, 0].cpu().numpy()
 
-    fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+    fig, axes = plt.subplots(1, 3, figsize=(15, 7))
 
     axes[0].imshow(L_input_np, cmap="gray")
     axes[0].set_title("Input")
@@ -51,8 +55,8 @@ def run_untrained_inference():
     axes[2].axis("off")
 
     plt.tight_layout()
-    plt.savefig(main_config.PREDICTED_IMAGES / f"{MODEL_ID}.jpeg")
+    plt.savefig(main_config.PREDICTED_IMAGES / f"{model_id}_{get_uuid_str()[:8]}.jpeg")
 
 
 if __name__ == "__main__":
-    run_untrained_inference()
+    colorize_image("baseline_unet_epoch_10")

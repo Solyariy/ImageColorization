@@ -12,9 +12,12 @@ from src.setup.enums import RunTypeEnum
 
 
 class ColorizationDataset(Dataset):
-    def __init__(self, root_dir, split: RunTypeEnum = RunTypeEnum.TRAIN):
-        self.files = glob.glob(os.path.join(root_dir, "*.jpg"))
-        np.random.shuffle(self.files)
+    def __init__(self, root_dir: str = None, split: RunTypeEnum = RunTypeEnum.TRAIN, single_image: str = None):
+        if single_image:
+            self.files = [single_image]
+        else:
+            self.files = glob.glob(os.path.join(root_dir, "*.jpg"))
+            np.random.shuffle(self.files)
 
         split_idx = int(len(self.files) * 0.8)
         if split == RunTypeEnum.TRAIN:
@@ -56,9 +59,10 @@ def make_dataloaders(
         split: RunTypeEnum,
         batch_size=16,
         n_workers=4,
-        pin_memory=False
+        pin_memory=False,
+        image_path: str = None
 ):
-    dataset = ColorizationDataset(root_dir=root_dir, split=split)
+    dataset = ColorizationDataset(root_dir=root_dir, split=split, single_image=image_path)
     dataloader = DataLoader(
         dataset,
         batch_size=batch_size,
