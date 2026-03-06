@@ -52,7 +52,7 @@ def train_one_epoch(model, loader, processor, optimizer, criterion, epoch):
 
 
 def save_checkpoint(model, epoch):
-    path = main_config.TRAINED_MODELS / f"{get_datetime()}_epoch_{epoch + 1}.pth"
+    path = main_config.TRAINED_MODELS / f"{get_datetime()}_baseline_epoch_{epoch + 1}.pth"
     torch.save(model.state_dict(), path)
     print(f"Saved checkpoint to {path}\n")
 
@@ -69,7 +69,7 @@ def train_baseline():
     optimizer = optim.Adam(
         model.parameters(),
         lr=TrainingConfig.LEARNING_RATE,
-        betas=(0.5, 0.999)
+        betas=TrainingConfig.BETAS
     )
 
     for epoch in range(TrainingConfig.EPOCHS):

@@ -24,7 +24,10 @@ class BenchmarkConfig:
 class TrainingConfig:
     BATCH_SIZE: int = 16
     LEARNING_RATE: float = 2e-4
-    EPOCHS: int = 20
+    EPOCHS: int = 30
+    GAN_EPOCHS: int = 100
+    BETAS: tuple[float, float] = (0.5, 0.999)
+    LAMBDA_L1: int = 100
 
 
 main_config = MainConfig
