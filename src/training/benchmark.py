@@ -3,8 +3,8 @@ import torch.nn as nn
 
 from src.image_processing.dataset import make_dataloaders
 from src.image_processing.lab_convertor import LabConvertor
-from src.models import ColorizationModel
-from src.setup.config import BenchmarkConfig, TrainingConfig, MainConfig
+from src.model import ColorizationModel
+from src.setup.config import BenchmarkConfig, TrainingConfig, MainConfig, main_config
 from src.setup.enums import RunTypeEnum
 
 
@@ -67,7 +67,8 @@ def measure_throughput(loader_iter, model, processor, criterion, optimizer, devi
 
 
 def run_benchmark(model):
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = main_config.DEVICE
+    print(torch.cuda.get_device_name(0))
     model, criterion, optimizer, processor = setup_benchmark_components(model, device)
 
     print(f"{'Batch Size':<12} | {'Workers':<9} | {'Speed (it/s)':<15} | {'Images/sec':<15}")
