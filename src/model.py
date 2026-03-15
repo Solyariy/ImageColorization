@@ -6,7 +6,7 @@ from src.models.resnet_encoder import ResNetEncoder
 
 
 class ColorizationModel(nn.Module):
-    def __init__(self, encoder = ResNetEncoder, decoder = UNetDecoder):
+    def __init__(self, encoder = UNetEncoder, decoder = UNetDecoder):
         super().__init__()
         self.encoder = encoder()
         self.decoder = decoder()

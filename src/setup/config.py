@@ -16,7 +16,7 @@ class MainConfig:
 
 
 class BenchmarkConfig:
-    BATCH_SIZES: list[int] = [16]#, 32, 64]
+    BATCH_SIZES: list[int] = [16, 32, 64]
     WORKER_COUNTS: list[int] = [0, 2, 4, 6, 8]
     TEST_BATCHES: int = 10
 

@@ -37,26 +37,24 @@ class BasicBlock(nn.Module):
 
 
 class UNetEncoder(nn.Module):
-    def __init__(self, block=BasicBlock, num_blocks=[2, 2, 2, 2]):
+    def __init__(self, block=BasicBlock, num_blocks: tuple[int, int, int, int] = None):
         super().__init__()
+        if not num_blocks:
+            num_blocks = (2,2,2,2)
         self.in_channels = 64
 
-        # 1. Initial Convolutional Layer (Modified for 1-channel input)
         self.conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False)
         self.bn1 = nn.BatchNorm2d(64)
         self.relu = nn.ReLU(inplace=True)
 
-        # 2. MaxPool layer
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
 
-        # 3. ResNet Layers (Each contains multiple BasicBlocks)
         self.layer1 = self._make_layer(block, 64, num_blocks[0], stride=1)
         self.layer2 = self._make_layer(block, 128, num_blocks[1], stride=2)
         self.layer3 = self._make_layer(block, 256, num_blocks[2], stride=2)
         self.layer4 = self._make_layer(block, 512, num_blocks[3], stride=2)
 
     def _make_layer(self, block, out_channels, num_blocks, stride):
-        """Creates a sequential block of ResNet layers."""
         strides = [stride] + [1] * (num_blocks - 1)
         layers = []
         for s in strides:
@@ -65,22 +63,15 @@ class UNetEncoder(nn.Module):
         return nn.Sequential(*layers)
 
     def forward(self, x):
-        # e0: Output after initial conv, bn, and relu (Shape: B, 64, H/2, W/2)
         x = self.conv1(x)
         x = self.bn1(x)
         e0 = self.relu(x)
 
-        # e1: Output after maxpool and layer 1 (Shape: B, 64, H/4, W/4)
         x = self.maxpool(e0)
+
         e1 = self.layer1(x)
-
-        # e2: Output after layer 2 (Shape: B, 128, H/8, W/8)
         e2 = self.layer2(e1)
-
-        # e3: Output after layer 3 (Shape: B, 256, H/16, W/16)
         e3 = self.layer3(e2)
-
-        # e4: Output after layer 4 (Shape: B, 512, H/32, W/32)
         e4 = self.layer4(e3)
 
         return [e0, e1, e2, e3, e4]
