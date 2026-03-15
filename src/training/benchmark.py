@@ -1,3 +1,5 @@
+import time
+
 import torch
 import torch.nn as nn
 
@@ -34,11 +36,16 @@ def run_warmup(loader_iter, model, processor, criterion, optimizer, device):
 
 
 def measure_throughput(loader_iter, model, processor, criterion, optimizer, device, batch_size):
-    start_event = torch.cuda.Event(enable_timing=True)
-    end_event = torch.cuda.Event(enable_timing=True)
+    device_type = device.type if isinstance(device, torch.device) else device
+    if device_type == "cuda":
+        start_event = torch.cuda.Event(enable_timing=True)
+        end_event = torch.cuda.Event(enable_timing=True)
+        start_event.record()
+    else:
+        start_time = time.perf_counter()
+
     valid_batches = 0
 
-    start_event.record()
     for _ in range(BenchmarkConfig.TEST_BATCHES):
         try:
             rgb_batch = next(loader_iter).to(device, non_blocking=True)
@@ -54,11 +61,14 @@ def measure_throughput(loader_iter, model, processor, criterion, optimizer, devi
         except StopIteration:
             break
 
-    end_event.record()
-    torch.cuda.synchronize()
+    if device_type == "cuda":
+        end_event.record()
+        torch.cuda.synchronize()
+        duration_sec = start_event.elapsed_time(end_event) / 1000
+    else:
+        duration_sec = time.perf_counter() - start_time
 
     if valid_batches > 0:
-        duration_sec = start_event.elapsed_time(end_event) / 1000
         it_per_sec = valid_batches / duration_sec
         img_per_sec = (valid_batches * batch_size) / duration_sec
         return it_per_sec, img_per_sec
@@ -68,7 +78,6 @@ def measure_throughput(loader_iter, model, processor, criterion, optimizer, devi
 
 def run_benchmark(model):
     device = main_config.DEVICE
-    print(torch.cuda.get_device_name(0))
     model, criterion, optimizer, processor = setup_benchmark_components(model, device)
 
     print(f"{'Batch Size':<12} | {'Workers':<9} | {'Speed (it/s)':<15} | {'Images/sec':<15}")

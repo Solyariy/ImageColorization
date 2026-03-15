@@ -28,7 +28,6 @@ def setup_data():
 
 
 def train_one_epoch(model, loader, processor, optimizer, criterion, epoch):
-    model.train()
     running_loss = 0
     loop = tqdm(loader, desc=f"Epoch {epoch + 1}/{TrainingConfig.EPOCHS}")
 
@@ -71,6 +70,8 @@ def train_baseline():
         lr=TrainingConfig.LEARNING_RATE,
         betas=TrainingConfig.BETAS
     )
+
+    model.train()
 
     for epoch in range(TrainingConfig.EPOCHS):
         avg_loss = train_one_epoch(

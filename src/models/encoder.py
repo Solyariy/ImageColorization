@@ -1,34 +1,86 @@
-import torch
-from torch import nn
-from torchvision.models import resnet18, ResNet18_Weights
+import torch.nn as nn
 
 
-class ResNetEncoder(nn.Module):
-    def __init__(self):
+class BasicBlock(nn.Module):
+    expansion = 1
+
+    def __init__(self, in_channels, out_channels, stride=1):
         super().__init__()
-        resnet = resnet18(weights=ResNet18_Weights.DEFAULT)
+        self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=stride, padding=1, bias=False)
+        self.bn1 = nn.BatchNorm2d(out_channels)
+        self.relu = nn.ReLU(inplace=True)
 
-        original_conv1 = resnet.conv1
-        new_conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False)
+        self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=False)
+        self.bn2 = nn.BatchNorm2d(out_channels)
 
-        with torch.no_grad():
-            new_conv1.weight.copy_(original_conv1.weight.sum(dim=1, keepdim=True))
-
-        self.encoder0 = nn.Sequential(
-            new_conv1,
-            resnet.bn1,
-            resnet.relu
-        )
-        self.encoder1 = nn.Sequential(resnet.maxpool, resnet.layer1)
-        self.encoder2 = resnet.layer2
-        self.encoder3 = resnet.layer3
-        self.encoder4 = resnet.layer4
+        self.downsample = nn.Sequential()
+        if stride != 1 or in_channels != out_channels * self.expansion:
+            self.downsample = nn.Sequential(
+                nn.Conv2d(in_channels, out_channels * self.expansion, kernel_size=1, stride=stride, bias=False),
+                nn.BatchNorm2d(out_channels * self.expansion)
+            )
 
     def forward(self, x):
-        e0 = self.encoder0(x)
-        e1 = self.encoder1(e0)
-        e2 = self.encoder2(e1)
-        e3 = self.encoder3(e2)
-        e4 = self.encoder4(e3)
+        identity = self.downsample(x)
+
+        out = self.conv1(x)
+        out = self.bn1(out)
+        out = self.relu(out)
+
+        out = self.conv2(out)
+        out = self.bn2(out)
+
+        out += identity
+        out = self.relu(out)
+
+        return out
+
+
+class UNetEncoder(nn.Module):
+    def __init__(self, block=BasicBlock, num_blocks=[2, 2, 2, 2]):
+        super().__init__()
+        self.in_channels = 64
+
+        # 1. Initial Convolutional Layer (Modified for 1-channel input)
+        self.conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False)
+        self.bn1 = nn.BatchNorm2d(64)
+        self.relu = nn.ReLU(inplace=True)
+
+        # 2. MaxPool layer
+        self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
+
+        # 3. ResNet Layers (Each contains multiple BasicBlocks)
+        self.layer1 = self._make_layer(block, 64, num_blocks[0], stride=1)
+        self.layer2 = self._make_layer(block, 128, num_blocks[1], stride=2)
+        self.layer3 = self._make_layer(block, 256, num_blocks[2], stride=2)
+        self.layer4 = self._make_layer(block, 512, num_blocks[3], stride=2)
+
+    def _make_layer(self, block, out_channels, num_blocks, stride):
+        """Creates a sequential block of ResNet layers."""
+        strides = [stride] + [1] * (num_blocks - 1)
+        layers = []
+        for s in strides:
+            layers.append(block(self.in_channels, out_channels, s))
+            self.in_channels = out_channels * block.expansion
+        return nn.Sequential(*layers)
+
+    def forward(self, x):
+        # e0: Output after initial conv, bn, and relu (Shape: B, 64, H/2, W/2)
+        x = self.conv1(x)
+        x = self.bn1(x)
+        e0 = self.relu(x)
+
+        # e1: Output after maxpool and layer 1 (Shape: B, 64, H/4, W/4)
+        x = self.maxpool(e0)
+        e1 = self.layer1(x)
+
+        # e2: Output after layer 2 (Shape: B, 128, H/8, W/8)
+        e2 = self.layer2(e1)
+
+        # e3: Output after layer 3 (Shape: B, 256, H/16, W/16)
+        e3 = self.layer3(e2)
+
+        # e4: Output after layer 4 (Shape: B, 512, H/32, W/32)
+        e4 = self.layer4(e3)
 
         return [e0, e1, e2, e3, e4]
