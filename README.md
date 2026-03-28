@@ -3,7 +3,8 @@
 
 ### How to run
 
-Run `pip install -r requirements.txt` before starting
+Run `pip install -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cu121` before starting.
+Or `pip install -r mac_requirements.txt`.
 
 Project config is in `src/setup/config.py`
 

@@ -144,4 +144,4 @@ def run_gan_session(baseline_name: str):
 
 
 if __name__ == "__main__":
-    run_gan_session("2026-03-01_18-16-21_epoch_30.pth")
+    run_gan_session("2026-03-15_14-03-28_baseline_epoch_30.pth")

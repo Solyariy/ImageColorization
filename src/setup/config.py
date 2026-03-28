@@ -23,6 +23,7 @@ class BenchmarkConfig:
 
 class TrainingConfig:
     BATCH_SIZE: int = 16
+    NUM_WORKERS: int = 8
     LEARNING_RATE: float = 2e-4
     EPOCHS: int = 30
     GAN_EPOCHS: int = 100

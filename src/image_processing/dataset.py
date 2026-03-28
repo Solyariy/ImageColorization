@@ -14,7 +14,7 @@ from src.setup.enums import RunTypeEnum
 class ColorizationDataset(Dataset):
     def __init__(self, root_dir: str = None, split: RunTypeEnum = RunTypeEnum.TRAIN, single_image: str = None):
         if single_image:
-            self.files = [single_image]
+            self.files = [os.path.join(root_dir, single_image)]
         else:
             self.files = glob.glob(os.path.join(root_dir, "*.jpg"))
             np.random.shuffle(self.files)
